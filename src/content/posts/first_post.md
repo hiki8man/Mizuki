@@ -5,7 +5,7 @@ pinned: false
 description: 测试mizuki主题搭建是否成功
 #tags: [Markdown, Blogging]
 #category: Examples
-licenseName: "Unlicensed"
+#licenseName: "Unlicensed"
 author: hiki8man
 #sourceLink: "https://github.com/emn178/markdown"
 draft: false
