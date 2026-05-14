@@ -17,6 +17,7 @@ import MainGridLayout from "@layouts/MainGridLayout.astro";
 import { getRelatedPosts, getSortedPosts } from "@utils/content-utils";
 import { hasCustomPermalink, initPostIdMap } from "@utils/permalink-utils";
 import { getFileDirFromPath, removeFileExtension } from "@utils/url-utils";
+import { getImage } from "astro:assets";
 import type { CollectionEntry } from "astro:content";
 import { render } from "astro:content";
 import {
@@ -31,8 +32,6 @@ import Image from "../../components/atoms/Image/Image.astro";
 import Encryptor from "../../components/features/auth/Encryptor.astro";
 import { profileConfig, siteConfig } from "../../config";
 import { formatDateToYYYYMMDD } from "../../utils/date-utils";
-
-import { getImage } from "astro:assets";
 
 export async function getStaticPaths() {
 	const blogEntries = await getSortedPosts();
@@ -155,7 +154,7 @@ if (entry.data.image) {
 			posterCoverUrl = entry.data.image;
 		}
 	} else {
-		ogCoverUrl = entry.data.image;  // absolute path like "/images/foo.png"
+		ogCoverUrl = entry.data.image; // absolute path like "/images/foo.png"
 	}
 }
 

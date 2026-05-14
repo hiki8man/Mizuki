@@ -35,7 +35,6 @@ const hoursAgo = i18n(I18nKey.diaryHoursAgo);
 const daysAgo = i18n(I18nKey.diaryDaysAgo);
 
 const diaryApiUrl = siteConfig.diaryApiUrl || "";
-const timeZone = siteConfig.timeZone;
 
 const title = i18n(I18nKey.diary);
 const subtitle = i18n(I18nKey.diarySubtitle);
@@ -101,7 +100,7 @@ const subtitle = i18n(I18nKey.diarySubtitle);
 					)
 				}
 
-				<div id="diary-list" class="space-y-4" data-memos-api={diaryApiUrl || ""} data-time-zone={timeZone} data-minutes-ago={minutesAgo} data-hours-ago={hoursAgo} data-days-ago={daysAgo}>
+				<div id="diary-list" class="space-y-4" data-memos-api={diaryApiUrl || ""} data-minutes-ago={minutesAgo} data-hours-ago={hoursAgo} data-days-ago={daysAgo}>
 					{
 						moments.map((moment, index) => (
 							<MomentCard
@@ -152,17 +151,16 @@ const subtitle = i18n(I18nKey.diarySubtitle);
 		diaryApiUrl && (
 			<script is:inline>
 				(function () {
-					var container = document.getElementById("diary-list");
-					if (!container) return;
-					var apiUrl = container.dataset.memosApi;
-					if (!apiUrl) return;
-					var timeZone = parseInt(container.dataset.timeZone) || 8;
-					var minutesAgo = container.dataset.minutesAgo || "minutes ago";
-					var hoursAgo = container.dataset.hoursAgo || "hours ago";
-					var daysAgo = container.dataset.daysAgo || "days ago";
+					const container = document.getElementById("diary-list");
+					if (!container) {return;}
+					const apiUrl = container.dataset.memosApi;
+					if (!apiUrl) {return;}
+					const minutesAgo = container.dataset.minutesAgo || "minutes ago";
+					const hoursAgo = container.dataset.hoursAgo || "hours ago";
+					const daysAgo = container.dataset.daysAgo || "days ago";
 
 					// Derive base URL for file attachments (strip /api/...)
-					var baseUrl = apiUrl.replace(/\/api\/.*$/, "");
+					const baseUrl = apiUrl.replace(/\/api\/.*$/, "");
 
 					function transformMemosToDiary(memos) {
 						return memos
@@ -172,18 +170,18 @@ const subtitle = i18n(I18nKey.diarySubtitle);
 								);
 							})
 							.map(function (m, i) {
-								var images =
-									m.attachments && m.attachments.length > 0
-										? m.attachments
-												.filter(function (a) {
-													return a.type.indexOf("image/") === 0;
-												})
-												.map(function (a) {
-													return (
-														baseUrl + "/file/" + a.name + "/" + a.filename
-													);
-												})
-										: [];
+								const images =
+					m.attachments && m.attachments.length > 0
+						? m.attachments
+								.filter(function (a) {
+									return a.type.indexOf("image/") === 0;
+								})
+								.map(function (a) {
+									return (
+										baseUrl + "/file/" + a.name + "/" + a.filename
+									);
+								})
+						: [];
 								return {
 									id: i,
 									content: m.content,
@@ -195,75 +193,71 @@ const subtitle = i18n(I18nKey.diarySubtitle);
 								};
 							})
 							.sort(function (a, b) {
-								if (a.pinned && !b.pinned) return -1;
-								if (!a.pinned && b.pinned) return 1;
+								if (a.pinned && !b.pinned) {return -1;}
+								if (!a.pinned && b.pinned) {return 1;}
 								return new Date(b.date).getTime() - new Date(a.date).getTime();
 							});
 					}
 
 					function formatRelativeTime(dateString) {
-						var now = new Date();
-						var utc =
-							now.getTime() + now.getTimezoneOffset() * 60 * 1000;
-						var localNow = utc + timeZone * 60 * 60 * 1000;
-						var date = new Date(dateString);
-						var diffInMinutes = Math.floor(
-							(localNow - date.getTime()) / (1000 * 60),
-						);
+						const date = new Date(dateString);
+						const diffInMinutes = Math.floor(
+			(Date.now() - date.getTime()) / (1000 * 60),
+		);
 						if (diffInMinutes < 60)
-							return diffInMinutes + minutesAgo;
+							{return diffInMinutes + minutesAgo;}
 						if (diffInMinutes < 1440)
-							return Math.floor(diffInMinutes / 60) + hoursAgo;
+							{return Math.floor(diffInMinutes / 60) + hoursAgo;}
 						return Math.floor(diffInMinutes / 1440) + daysAgo;
 					}
 
 					function escapeHtml(text) {
-						var map = {
-							"&": "&amp;",
-							"<": "&lt;",
-							">": "&gt;",
-							'"': "&quot;",
-							"'": "&#039;",
-						};
+						const map = {
+			"&": "&amp;",
+			"<": "&lt;",
+			">": "&gt;",
+			'"': "&quot;",
+			"'": "&#039;",
+		};
 						return text.replace(/[&<>"']/g, function (c) {
 							return map[c];
 						});
 					}
 
 					function getImageLayoutClass(count) {
-						if (count === 1) return "diary-images-single";
-						if (count === 2) return "diary-images-double";
-						if (count === 3) return "diary-images-triple";
+						if (count === 1) {return "diary-images-single";}
+						if (count === 2) {return "diary-images-double";}
+						if (count === 3) {return "diary-images-triple";}
 						return "diary-images-grid";
 					}
 
 					function renderMomentCards(moments) {
 						return moments
 							.map(function (moment, index) {
-								var relativeTime = formatRelativeTime(moment.date);
-								var tagsAttr = (moment.tags || []).join(",");
+								const relativeTime = formatRelativeTime(moment.date);
+								const tagsAttr = (moment.tags || []).join(",");
 
-								var imagesHtml = "";
+								let imagesHtml = "";
 								if (moment.images && moment.images.length > 0) {
-									var layoutClass = getImageLayoutClass(moment.images.length);
-									var imgs = moment.images
-										.map(function (img, i) {
-											return (
-												'<div class="relative rounded-lg overflow-hidden aspect-square cursor-pointer">' +
-												'<a href="javascript:void(0)" data-src="' +
-												escapeHtml(img) +
-												'" data-fancybox="diary-' +
-												index +
-												"-" +
-												i +
-												'" class="block w-full h-full">' +
-												'<img src="' +
-												escapeHtml(img) +
-												'" alt="diary moment image" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" loading="lazy" decoding="async" />' +
-												"</a></div>"
-											);
-										})
-										.join("");
+									const layoutClass = getImageLayoutClass(moment.images.length);
+									const imgs = moment.images
+						.map(function (img, i) {
+							return (
+								'<div class="relative rounded-lg overflow-hidden aspect-square cursor-pointer">' +
+								'<a href="javascript:void(0)" data-src="' +
+								escapeHtml(img) +
+								'" data-fancybox="diary-' +
+								index +
+								"-" +
+								i +
+								'" class="block w-full h-full">' +
+								'<img src="' +
+								escapeHtml(img) +
+								'" alt="diary moment image" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" loading="lazy" decoding="async" />' +
+								"</a></div>"
+							);
+						})
+						.join("");
 									imagesHtml =
 										'<div class="diary-images grid gap-2 mb-3 ' +
 										layoutClass +
@@ -272,28 +266,28 @@ const subtitle = i18n(I18nKey.diarySubtitle);
 										"</div>";
 								}
 
-								var tagsHtml = "";
+								let tagsHtml = "";
 								if (moment.tags && moment.tags.length > 0) {
-									var tagSpans = moment.tags
-										.map(function (tag) {
-											return (
-												'<span class="btn-regular h-6 text-xs px-2 rounded-lg">' +
-												escapeHtml(tag) +
-												"</span>"
-											);
-										})
-										.join("");
+									const tagSpans = moment.tags
+						.map(function (tag) {
+							return (
+								'<span class="btn-regular h-6 text-xs px-2 rounded-lg">' +
+								escapeHtml(tag) +
+								"</span>"
+							);
+						})
+						.join("");
 									tagsHtml =
 										'<div class="flex flex-wrap gap-1.5 mb-3">' +
 										tagSpans +
 										"</div>";
 								}
 
-								var locationHtml = moment.location
-									? '<span class="flex items-center gap-1"><iconify-icon icon="material-symbols:location-on" class="text-xs w-3.5 h-3.5"></iconify-icon>' +
-										escapeHtml(moment.location) +
-										"</span>"
-									: "";
+								const locationHtml = moment.location
+					? '<span class="flex items-center gap-1"><iconify-icon icon="material-symbols:location-on" class="text-xs w-3.5 h-3.5"></iconify-icon>' +
+						escapeHtml(moment.location) +
+						"</span>"
+					: "";
 
 								return (
 									'<div class="moment-card group relative bg-transparent rounded-xl border border-black/10 dark:border-white/10 overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1" data-tags="' +
@@ -328,18 +322,18 @@ const subtitle = i18n(I18nKey.diarySubtitle);
 					}
 
 					function rebuildFilterTabs(moments) {
-						var filterContainer = document.querySelector(".filter-tabs");
+						let filterContainer = document.querySelector(".filter-tabs");
 						if (!filterContainer) {
 							// No filter tabs in static render — need to create the container
-							var contentArea = document.querySelector(".card-base .px-6.sm\\:px-9.pt-2.pb-6");
-							if (!contentArea) return;
+							const contentArea = document.querySelector(".card-base .px-6.sm\\:px-9.pt-2.pb-6");
+							if (!contentArea) {return;}
 							filterContainer = document.createElement("div");
 							filterContainer.className = "filter-tabs mb-8";
 							contentArea.insertBefore(filterContainer, contentArea.firstChild);
 						}
 
-						var allTags = [];
-						var seen = {};
+						const allTags = [];
+						const seen = {};
 						moments.forEach(function (m) {
 							(m.tags || []).forEach(function (t) {
 								if (!seen[t]) {
@@ -351,15 +345,15 @@ const subtitle = i18n(I18nKey.diarySubtitle);
 						allTags.sort();
 
 						// Remove existing tabs
-						var existingTabs = filterContainer.querySelectorAll(
-							".filter-tabs-item",
-						);
+						const existingTabs = filterContainer.querySelectorAll(
+			".filter-tabs-item",
+		);
 						existingTabs.forEach(function (tab) {
 							tab.remove();
 						});
 
 						// Create "all" tab
-						var allTab = document.createElement("button");
+						const allTab = document.createElement("button");
 						allTab.className = "filter-tabs-item active";
 						allTab.setAttribute("data-filter-value", "all");
 						allTab.setAttribute("data-filter-attr", "tags");
@@ -372,10 +366,10 @@ const subtitle = i18n(I18nKey.diarySubtitle);
 
 						// Create tag tabs
 						allTags.forEach(function (tag) {
-							var count = moments.filter(function (m) {
-								return m.tags && m.tags.indexOf(tag) !== -1;
-							}).length;
-							var tab = document.createElement("button");
+							const count = moments.filter(function (m) {
+				return m.tags && m.tags.indexOf(tag) !== -1;
+			}).length;
+							const tab = document.createElement("button");
 							tab.className = "filter-tabs-item";
 							tab.setAttribute("data-filter-value", tag);
 							tab.setAttribute("data-filter-attr", "tags");
@@ -398,29 +392,29 @@ const subtitle = i18n(I18nKey.diarySubtitle);
 					}
 
 					function updateCountDisplay(count) {
-						var countEl = document.querySelector(
-							".card-base .shrink-0 .text-2xl",
-						);
+						const countEl = document.querySelector(
+			".card-base .shrink-0 .text-2xl",
+		);
 						if (countEl) {
 							countEl.textContent = String(count);
 						}
 					}
 
 					function fetchAndRender() {
-						if (!apiUrl) return;
+						if (!apiUrl) {return;}
 
 						fetch(apiUrl)
 							.then(function (res) {
-								if (!res.ok) throw new Error("HTTP " + res.status);
+								if (!res.ok) {throw new Error("HTTP " + res.status);}
 								return res.json();
 							})
 							.then(function (data) {
-								var memos = data.memos || [];
-								if (memos.length === 0) return;
+								const memos = data.memos || [];
+								if (memos.length === 0) {return;}
 
-								var moments = transformMemosToDiary(memos);
-								var container = document.getElementById("diary-list");
-								if (!container) return;
+								const moments = transformMemosToDiary(memos);
+								const container = document.getElementById("diary-list");
+								if (!container) {return;}
 
 								container.innerHTML = renderMomentCards(moments);
 								updateCountDisplay(moments.length);

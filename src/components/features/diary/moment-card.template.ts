@@ -56,7 +56,10 @@ export function transformMemosToDiary(
 				m.attachments.length > 0
 					? m.attachments
 							.filter((a) => a.type.startsWith("image/"))
-							.map((a) => `${baseUrl}/file/${a.name}/${a.filename}`)
+							.map(
+								(a) =>
+									`${baseUrl}/file/${a.name}/${a.filename}`,
+							)
 					: undefined,
 			location: m.location?.placeholder,
 			mood: undefined,
@@ -65,8 +68,12 @@ export function transformMemosToDiary(
 			// pinned 优先，其次按时间倒序
 			const aM = memos.find((m) => m.createTime === a.date);
 			const bM = memos.find((m) => m.createTime === b.date);
-			if (aM?.pinned && !bM?.pinned) return -1;
-			if (!aM?.pinned && bM?.pinned) return 1;
+			if (aM?.pinned && !bM?.pinned) {
+				return -1;
+			}
+			if (!aM?.pinned && bM?.pinned) {
+				return 1;
+			}
 			return new Date(b.date).getTime() - new Date(a.date).getTime();
 		});
 }
@@ -75,20 +82,18 @@ export function transformMemosToDiary(
 
 export function formatRelativeTime(
 	dateString: string,
-	timeZone: number,
 	minutesAgo: string,
 	hoursAgo: string,
 	daysAgo: string,
 ): string {
-	const now = new Date();
-	const utc = now.getTime() + now.getTimezoneOffset() * 60 * 1000;
-	const localNow = utc + timeZone * 60 * 60 * 1000;
 	const date = new Date(dateString);
 	const diffInMinutes = Math.floor(
-		(localNow - date.getTime()) / (1000 * 60),
+		(Date.now() - date.getTime()) / (1000 * 60),
 	);
 
-	if (diffInMinutes < 60) return `${diffInMinutes}${minutesAgo}`;
+	if (diffInMinutes < 60) {
+		return `${diffInMinutes}${minutesAgo}`;
+	}
 	if (diffInMinutes < 1440) {
 		return `${Math.floor(diffInMinutes / 60)}${hoursAgo}`;
 	}
@@ -98,9 +103,15 @@ export function formatRelativeTime(
 // --- 单张卡片 HTML 生成 ---
 
 function getImageLayoutClass(count: number): string {
-	if (count === 1) return "diary-images-single";
-	if (count === 2) return "diary-images-double";
-	if (count === 3) return "diary-images-triple";
+	if (count === 1) {
+		return "diary-images-single";
+	}
+	if (count === 2) {
+		return "diary-images-double";
+	}
+	if (count === 3) {
+		return "diary-images-triple";
+	}
 	return "diary-images-grid";
 }
 
@@ -122,12 +133,10 @@ function renderMomentCard(
 		minutesAgo: string;
 		hoursAgo: string;
 		daysAgo: string;
-		timeZone: number;
 	},
 ): string {
 	const relativeTime = formatRelativeTime(
 		moment.date,
-		opts.timeZone,
 		opts.minutesAgo,
 		opts.hoursAgo,
 		opts.daysAgo,
@@ -195,7 +204,6 @@ export function renderMomentCards(
 		minutesAgo: string;
 		hoursAgo: string;
 		daysAgo: string;
-		timeZone: number;
 	},
 ): string {
 	return moments.map((m, i) => renderMomentCard(m, i, opts)).join("");
