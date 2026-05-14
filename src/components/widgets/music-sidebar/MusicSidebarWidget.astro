@@ -10,13 +10,15 @@ const { class: className, style }: SidebarMusicWidgetProps = Astro.props;
 const widgetId = `music-sidebar-widget-${Math.random().toString(36).substring(2, 9)}`;
 ---
 
-{musicPlayerConfig.enable && (
-	<WidgetLayout
-		id={widgetId}
-		class={className}
-		style={style}
-		name={i18n(I18nKey.musicPlayer)}
-	>
-		<SidebarMusicClient client:only="svelte" />
-	</WidgetLayout>
-)}
+{
+	musicPlayerConfig.enable && (
+		<WidgetLayout
+			id={widgetId}
+			class={className}
+			style={style}
+			name={i18n(I18nKey.musicPlayer)}
+		>
+			<SidebarMusicClient client:only="svelte" />
+		</WidgetLayout>
+	)
+}
