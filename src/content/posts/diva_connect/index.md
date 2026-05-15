@@ -8,7 +8,7 @@ tags: [歌姬计划]
 #image: "./cover.png"
 
 published: 2026-05-13
-updated: 2026-05-14T20:00:00
+updated: 2026-05-15T20:00:00
 
 pinned: false
 draft: false
@@ -20,7 +20,41 @@ permalink: "diva_kiseki"
 而这也将成为后续尝试复现原作逻辑的同人游戏开发者的噩梦……
 
 ## 只是将点连起来成为一个多边形有这么难吗？ 
-也许你会觉得，我们只需要把多个点**按顺序连接起来就可以了**
+也许你会觉得，我们只需要把多个点**按顺序连接起来就可以了**  
+那么让我们跟着这个思路尝试编写代码，首先我们创建一个向量类便于后续进行计算  
+```python
+from dataclasses import dataclass
+@dataclass(frozen=True)
+class Vector:
+    x:float
+    y:float
+
+    def __add__(self, other) -> "Vector":
+        # a + b
+        if isinstance(other, Vector):
+            return Vector(self.x + other.x, self.y + other.y)
+        elif isinstance(other, (int, float)):
+            return Vector(self.x + other, self.y + other)
+        else:
+            raise TypeError()
+
+    def __sub__(self, other) -> "Vector":
+        # a - b
+        if isinstance(other, Vector):
+            return Vector(self.x - other.x, self.y - other.y)
+        elif isinstance(other, (int, float)):
+            return Vector(self.x - other, self.y - other)
+        else:
+            raise TypeError()
+
+    def __truediv__(self, other) -> "Vector":
+        # a / b
+        if isinstance(other, (int, float)):
+            return Vector(self.x / other, self.y / other)
+        else:
+            raise TypeError()
+
+```
 对于两个Note，我们只需要将其直接连接起来就行
 ```python
 if len(multi_note) == 2:
@@ -51,88 +85,26 @@ if len(multi_note) == 3:
 3. 按夹角重新排序，如果夹角一致则使用距离
 4. 按顺序绘制多押线并将结尾连起来
 
+
 ```python
-@dataclass
-class Vector:
-    x:float
-    y:float
-
-    def __add__(self, other) -> "Vector":
-        # a + b
-        if isinstance(other, Vector):
-            return Vector(self.x + other.x, self.y + other.y)
-        elif isinstance(other, (int, float)):
-            return Vector(self.x + other, self.y + other)
-    
-    def __iadd__(self, other) -> "Vector":
-        # += b
-        if isinstance(other, (int, float)):
-            self.x += other
-            self.y += other
-    
-    def __truediv__(self, other) -> "Vector":
-        # a / b
-        if isinstance(other, (int, float)):
-            return Vector(self.x / other, self.y / other)
-    
-    def __itruediv__(self, other) -> "Vector":
-        # /= b
-        if isinstance(other, (int, float)):
-            self.x /= other
-            self.y /= other
-
 def polar_angle_sort(multi_note: list[Vector]) -> list[Vector]:
+    count = len(multi_note)
     centorid = Vector(0,0)
+
     for note in multi_note:
-        centorid += note
+        centorid = centorid + note
+    centorid = centorid / count
 
-    centorid /= len(multi_note)
-
-    def sorted_func(note):
-        # 返回夹角和距离平方值用于排序
+    def sorted_func(note) -> float:
         angle = math.atan2(note.y - centorid.y, note.x - centorid.x)
-        distance_square = (note.x - centorid.x)**2 + (note.y - centorid.y)**2
-        return (angle, distance_square)
+        if angle < 0:
+            return angle + 2 * math.pi
 
-    return sorted(multi_note, key=sorted_func)
+        return angle
 
-def draw_line(multi_note: list[Vector]):
-    # 绘制连接线逻辑
-    pass
+    multi_note.sort(key=sorted_func) 
 
-def draw_connect(multi_note: list[Vector]):
-    # 按顺序连接
-    for i in range(len(multi_note)-1):
-        draw_line(multi_note[i], multi_note[i+1])
-    # 首尾连接
-    draw_line(multi_note[-1], multi_note[0])
-
-def on_same_position(multi_note: list[Vector]) -> bool:
-    check_point: None|Vector = None
-    for note in multi_note:
-        if not check_point is None:
-            if check_point.x != note.x 
-                return False
-            if check_point.y != note.y:
-                return False
-        check_point = note
-
-    return True
-
-def multi_connect(multi_note: list[Vector]):
-    # 多押连接线调用函数
-    multi_count = len(multi_note)
-
-    if multi_count < 2:
-        # 错误情况，不执行操作
-        pass
-
-    elif multi_count < 4 or on_same_position(multi_note):
-        # 能确定情况的直接按默认顺序连接
-        draw_connect(multi_note)
-
-    else:
-        draw_connect(polar_angle_sort(multi_note))
+    return multi_note
 ```
 
 ### ProjectDxxx：Andrew 凸包算法
@@ -165,20 +137,194 @@ def multi_connect(multi_note: list[Vector]):
 因此KHC选择了一种更简单粗暴的办法：如果存在被舍弃的点，那么这个点将会**直接与其他点相连。**  
 这样的做法很简单暴力，但考虑到四个点构成的多边形大概率是凸多边形，这种少数情况不进行严格处理也在情理之中  
 
-### 目前推测的官作做法  
+现在我们来实现这个算法，首先给向量添加叉乘和点乘方法便于后续调用
+```python
+class Vector: 
+    def dot(self, other) -> float:
+        # a.b
+        if isinstance(other, Vector):
+            return self.x * other.x + self.y * other.y
+        else:
+            raise TypeError()
+
+    def cross(self, other) -> float:
+        # a.b
+        if isinstance(other, Vector):
+            return self.x * other.y - self.y * other.x
+        else:
+            raise TypeError()
+```
+【没写完】
+
+### 我个人推测的算法  
 > [!NOTE]
-> 当前的算法少数情况仍然与Diva官作不符，  
+> 当前的算法少数情况仍然与Diva官作不符，如果有其他想法欢迎讨论  
 
-简单思路：
-1. 找出一个x最左侧的点A，如果有多个则选择y最低点  
-2. 找出一个x最右侧的点C，如果有多个则选择y最高点  
-3. 以这两个点连成的线为分界线将剩余的点分为上下两个部分  
-4. 下侧从左往右绕，以x坐标变大排序，如果x相同按Note读取顺序优先选择最后的Note  
-5. 上侧从右往左绕，以x坐标变小排序，如果x相同按Note读取顺序优先选择最后的Note  
-6. 最后连起来  
+我在进行实验观察谱面时发现：并不是所有排序都能组成闭合图形  
+因此我们大胆猜测——Diva可能有个判断是否能形成多边形的逻辑，如果其不能形成多边形则退化成线段  
 
-特殊的，对于Diva目前观测到的情况来说：
-- 如果所有的点都在同一个位置，则按照DSC读取顺序链接成闭合图形
-- 其他情况下游戏一定会按照A点 → 下侧点 → C点 → 上侧点 → A点的顺序连接，如果产生空则跳过
-- 如果点在分割线上，则将其默认分给上侧
+用文字解释比较麻烦，所以我绘制了一个流程图：  
+```mermaid
+graph TB
+    A[获取点集] --> B{所有点是否完全重合？}
+    B -->|是| C[保持原顺序形成闭合图形]
+    B -->|否| D{所有点是否共线？}
+    
+    D -->|否| E[以中心点为基点进行极角排序<br/>形成闭合多边形]
+    
+    D -->|是| F{共线条件下：<br/>是否只有一个孤立点<br/>且位于其他共线点<br/>的竖直上方？}
+    F -->|是| E
+    F -->|否| G[按XY坐标排序<br/>形成不闭合的线段]
+    
+    C --> H[结束]
+    E --> H
+    G --> H
+```
+如果看不懂流程也没事，接下来我们会编写代码来实现这个流程  
+
+#### 判断点集形状
+首先我们要进行点集形状的判断，在目前我所观测到的结果中，Diva的点集形状判断情况主要分为三种：  
+- 所有点在一个位置：不进行排序的闭合多边形
+- 所有点共线：不闭合的线段
+- 其他情况：闭合多边形
+
+为了提高代码可读性，我们先定义一个enum类表示这三种情况
+```python
+class Shape(Enum):
+    POLYGON = 0
+    LINE = 1
+    POINT = -1
+```
+我们来实现共线判断逻辑。要想判断三个点是否共线很简单，我们可以利用叉乘的几何定义计算叉乘的结果是否为0来确定是否共线，至于其是在正方向还是反方向我们并不关心
+```python
+note_pre2: None|Vector = multi_note[0]
+note_pre1: None|Vector = multi_note[1]
+
+for i in range(2, len(multi_note)):
+    note_cur = multi_note[i]
+    if is_line:
+        vet1 = note_pre1 - note_pre2
+        vet2 = note_cur - note_pre2
+        is_line = (vet1.cross(vet2) == 0)
+    else:
+        break
+```
+接下来是孤立点数量判断，在python中，如果要统计一个列表里各个元素出现的次数，Python提供了一个Counter类，该类会将元素存储为键，出现的次数作为值返回一个字典。我们可以直接利用这个类判断有多少个不同位置的点，从而同时实现了全共点与只有一个孤立点的判断逻辑    
+但由于Counter类返回的是字典，键值必须支持哈希，因此我们还需要改进向量类，使其支持哈希成为键值  
+```python
+class Vector: 
+    def __hash__(self) -> int:
+        return hash((self.x, self.y))
+```
+判断全共点和孤立点相关逻辑
+```python
+same_count_dict = Counter(multi_note) # Python自带的统计方法，会把重复的点数统计起来
+is_same = False # 判断是否为点
+diva_check = False # 修补Diva的判断逻辑
+
+if len(same_count_dict) == 1: # 所有点都在一个位置
+    is_same = True
+
+if len(same_count_dict) == 2: # 存在两个不重复的位置
+    
+    single, multi = None, None
+    keys:list[Vector] = list(same_count_dict.keys())
+
+    # 由于只有两个位置，我们可以直接根据这个位置对应的点的数量是否为1，来判断这个位置是不是孤立点
+    if same_count_dict[keys[0]] == 1:
+        single, multi = keys[1], keys[0]
+        
+    elif same_count_dict[keys[0]] == 1:
+        single, multi = keys[0], keys[1]
+
+    # 判断孤立点是否在上方
+    if isinstance(single, Vector) and isinstance(multi, Vector):
+        diva_check = (multi.y - single.y) < 0
+```
+完整函数代码
+```python
+def get_shape_type(multi_note: list[Vector]) -> Shape:
+    same_count_dict = Counter(multi_note) # Python自带的统计方法，会把重复的点数统计起来
+
+    is_line = True # 判断是否为线段
+    is_same = False # 判断是否为点
+    diva_check = False # 修补Diva的判断逻辑
+
+    note_pre2: None|Vector = multi_note[0]
+    note_pre1: None|Vector = multi_note[1]
+
+    for i in range(2, len(multi_note)):
+        note_cur = multi_note[i]
+        if is_line:
+            vet1 = note_pre1 - note_pre2
+            vet2 = note_cur - note_pre2
+            is_line = (vet1.cross(vet2) == 0)
+        else:
+            break
+        
+    if len(same_count_dict) == 1:
+        is_same = True
+    
+    if len(same_count_dict) == 2:
+        single, multi = 0, 0
+        keys:list[Vector] = list(same_count_dict.keys())
+        
+        if same_count_dict[keys[0]] > same_count_dict[keys[1]]:
+            single, multi = keys[1], keys[0]
+            
+        elif same_count_dict[keys[0]] < same_count_dict[keys[1]]:
+            single, multi = keys[0], keys[1]
+
+        if isinstance(single, Vector) and isinstance(multi, Vector):
+            diva_check = (multi.y - single.y) < 0
+
+    if is_same:
+        return Shape.POINT
+
+    elif diva_check:
+        return Shape.POLYGON
+
+    elif is_line:
+        return Shape.LINE
+    
+    else:
+        return Shape.POLYGON
+```
+连接线调用逻辑  
+```python
+def multi_connect(multi_note: list[Vector]):
+    # 多押连接线调用函数
+    multi_count = len(multi_note)
+
+    if multi_count < 2:
+        # 错误情况，不执行操作
+        pass
+    
+    shape_type = get_shape_type(multi_note)
+
+    if shape_type == Shape.LINE:
+        multi_note.sort(key=lambda x: (x.x, x.y))
+        return multi_note
+
+    elif shape_type == Shape.POINT:
+        multi_note.append(multi_note[0])
+        return multi_note
+
+    elif multi_count < 4:
+        # 能确定情况的直接按默认顺序连接
+        multi_note.append(multi_note[0])
+        return multi_note
+
+    else:
+        multi_note = polar_angle_sort(multi_note)
+        multi_note.append(multi_note[0])
+        return multi_note
+```
+考虑到Diva用C语言写的，atan2的开销可能会比较大，我们实际排序的时候只需要知道这个点的大小顺序，而不是真正的关心其具体角度数字  
+因此判断先后顺序可以简化成这样：  
+- 如果一个点到下一个点是逆时针移动的，那么下一个点的极角比现在的点极角更大
+- 如果一个点到下一个点是顺时针移动的，那么下一个点的极角比现在的点极角更小
+
+因此我们可以使用凸包算法的思路利用<mark>点乘</mark>和<mark>叉乘</mark>的定义简化这个问题  
+【需要写】
 
