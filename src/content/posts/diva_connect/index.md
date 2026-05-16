@@ -8,7 +8,7 @@ tags: [歌姬计划]
 #image: "./cover.png"
 
 published: 2026-05-13
-updated: 2026-05-15T20:00:00
+updated: 2026-05-16T12:00:00
 
 pinned: false
 draft: false
@@ -325,6 +325,218 @@ def multi_connect(multi_note: list[Vector]):
 - 如果一个点到下一个点是逆时针移动的，那么下一个点的极角比现在的点极角更大
 - 如果一个点到下一个点是顺时针移动的，那么下一个点的极角比现在的点极角更小
 
-因此我们可以使用凸包算法的思路利用<mark>点乘</mark>和<mark>叉乘</mark>的定义简化这个问题  
-【需要写】
+因此我们可以使用凸包算法的思路利用<mark>叉乘</mark>的定义简化这个问题  
+```python
+def polar_angle_sort_cross(multi_note: list[Vector]) -> list[Vector]:
+    count = len(multi_note)
+    centorid = Vector(0,0)
+
+    for note in multi_note:
+        centorid = centorid + note
+    centorid = centorid / count
+
+    # 定义一个比较器规则函数，利用叉乘的几何意义cos进行比较
+    def cmp_cross(point_a:Vector, point_b:Vector) -> int:
+        vet1:Vector = point_a - centorid
+        vet2:Vector = point_b - point_a
+        cross = vet1.cross(vet2)
+
+        if cross < 0:
+            return -1
+        elif cross > 0:
+            return 1
+        else:
+            return 0
+
+    # cos只能比较同样在上侧或同样在下侧的点，需要先分好上下两侧
+    top_note = [note for note in multi_note if note.y > centorid.y]
+    button_note = [note for note in multi_note if not note in top_note]
+
+    top_note.sort(key=cmp_to_key(cmp_cross))
+    button_note.sort(key=cmp_to_key(cmp_cross))
+
+    return top_note + button_note
+```
+当然，你也完全可以用<mark>点乘</mark>来实现，如果使用点乘则需要分为左右两侧，这里不再提供详细示例代码
+
+最后整理一下完整代码：
+```python
+from dataclasses import dataclass
+import math
+from enum import Enum
+from functools import cmp_to_key
+
+class Shape(Enum):
+    POLYGON = 0
+    LINE = 1
+    POINT = -1
+
+@dataclass(frozen=True)
+class Vector:
+    x:float
+    y:float
+
+    def __add__(self, other) -> "Vector":
+        # a + b
+        if isinstance(other, Vector):
+            return Vector(self.x + other.x, self.y + other.y)
+        elif isinstance(other, (int, float)):
+            return Vector(self.x + other, self.y + other)
+        else:
+            raise TypeError()
+
+    def __sub__(self, other) -> "Vector":
+        # a - b
+        if isinstance(other, Vector):
+            return Vector(self.x - other.x, self.y - other.y)
+        elif isinstance(other, (int, float)):
+            return Vector(self.x - other, self.y - other)
+        else:
+            raise TypeError()
+
+    def __truediv__(self, other) -> "Vector":
+        # a / b
+        if isinstance(other, (int, float)):
+            return Vector(self.x / other, self.y / other)
+        else:
+            raise TypeError()
+
+    def dot(self, other) -> float:
+        # a.b
+        if isinstance(other, Vector):
+            return self.x * other.x + self.y * other.y
+        else:
+            raise TypeError()
+    
+    def cross(self, other) -> float:
+        # a.b
+        if isinstance(other, Vector):
+            return self.x * other.y - self.y * other.x
+        else:
+            raise TypeError()
+    
+    def to_tuple(self) -> tuple[float, float]:
+        return (self.x, self.y)
+    
+    def __hash__(self) -> int:
+        return hash((self.x, self.y))
+
+def get_shape_type(multi_note: list[Vector]) -> Shape:
+    same_count_dict = Counter(multi_note)
+
+    is_line = True
+    is_same = False
+    diva_check = False
+
+    note_pre2: None|Vector = multi_note[0]
+    note_pre1: None|Vector = multi_note[1]
+
+    # 检测共线，如果不共线直接跳出循环
+    for i in range(2, len(multi_note)):
+        note_cur = multi_note[i]
+        if is_line:
+            vet1 = note_pre1 - note_pre2
+            vet2 = note_cur - note_pre2
+            is_line = (vet1.cross(vet2) == 0)
+        else:
+            break
+        
+    if len(same_count_dict) == 1:
+        is_same = True
+    
+    # 处理特殊共线情况匹配Diva实际效果
+    if len(same_count_dict) == 2:
+        
+        single:None|Vector = None
+        multi:None|Vector = None
+
+        keys:list[Vector] = list(same_count_dict.keys())
+        
+        # 检测不共点，确保传入的即使是双押也不会有问题
+        if same_count_dict[keys[0]] > same_count_dict[keys[1]] and same_count_dict[keys[1]] == 1:
+            single, multi = keys[1], keys[0]
+            
+        elif same_count_dict[keys[0]] < same_count_dict[keys[1]] and same_count_dict[keys[0]] == 1:
+            single, multi = keys[0], keys[1]
+
+        #计算不共点相对位置，如果在共点上方则按照Diva的逻辑算作多边形
+        if isinstance(single, Vector) and isinstance(multi, Vector):
+            diva_check = (multi.y - single.y) < 0
+
+    if is_line == False and is_same == False:
+        return Shape.POLYGON
+
+    elif diva_check:
+        return Shape.POLYGON
+
+    elif is_same:
+        return Shape.POINT
+
+    else:
+        return Shape.LINE
+
+def polar_angle_sort_cross(multi_note: list[Vector]) -> list[Vector]:
+    count = len(multi_note)
+    centorid = Vector(0,0)
+
+    for note in multi_note:
+        centorid = centorid + note
+    centorid = centorid / count
+
+    # 定义一个比较器规则函数，利用叉乘的几何意义cos进行比较
+    def cmp_cross(point_a:Vector, point_b:Vector) -> int:
+        vet1:Vector = point_a - centorid
+        vet2:Vector = point_b - point_a
+        cross = vet1.cross(vet2)
+
+        if cross < 0:
+            return -1
+        elif cross > 0:
+            return 1
+        else:
+            return 0
+
+    # cos只能比较同样在上侧或同样在下侧的点，需要先分好上下两测
+    top_note = [note for note in multi_note if note.y > centorid.y]
+    button_note = [note for note in multi_note if not note in top_note]
+
+    top_note.sort(key=cmp_to_key(cmp_cross))
+    button_note.sort(key=cmp_to_key(cmp_cross))
+
+    return top_note + button_note
+
+def multi_connect(multi_note: list[Vector]):
+    # 多押连接线调用函数
+    multi_count = len(multi_note)
+
+    if multi_count == 0:
+        raise ValueError("Note列表为空")
+
+    if multi_count == 1:
+        return multi_note[0]
+
+    if multi_count == 2:
+        return multi_note
+    
+    # 三个及以上需要考虑是否进行退化
+    shape_type = get_shape_type(multi_note)
+
+    if shape_type == Shape.LINE:
+        multi_note.sort(key=lambda x: (x.x, x.y))
+        return multi_note
+
+    elif shape_type == Shape.POINT:
+        multi_note.append(multi_note[0])
+        return multi_note
+
+    elif multi_count < 4:
+        # 能确定情况的直接按默认顺序连接
+        multi_note.append(multi_note[0])
+        return multi_note
+
+    else:
+        multi_note = polar_angle_sort_cross(multi_note)
+        multi_note.append(multi_note[0])
+        return multi_note
+```
 
