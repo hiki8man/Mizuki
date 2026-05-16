@@ -226,29 +226,29 @@ if len(same_count_dict) == 1: # 所有点都在一个位置
     is_same = True
 
 if len(same_count_dict) == 2: # 存在两个不重复的位置
-    
-    single, multi = None, None
-    keys:list[Vector] = list(same_count_dict.keys())
+    diva_check = True
+    single:None|Vector = None
+    multi:None|Vector = None
 
-    # 由于只有两个位置，我们可以直接根据这个位置对应的点的数量是否为1，来判断这个位置是不是孤立点
-    if same_count_dict[keys[0]] == 1:
+    keys:list[Vector] = list(same_count_dict.keys())
+    
+    if same_count_dict[keys[0]] > same_count_dict[keys[1]] and same_count_dict[keys[1]] == 1:
         single, multi = keys[1], keys[0]
         
-    elif same_count_dict[keys[0]] == 1:
+    elif same_count_dict[keys[0]] < same_count_dict[keys[1]] and same_count_dict[keys[0]] == 1:
         single, multi = keys[0], keys[1]
 
-    # 判断孤立点是否在上方
     if isinstance(single, Vector) and isinstance(multi, Vector):
-        diva_check = (multi.y - single.y) < 0
+        diva_check = (multi.y - single.y) <= 0
 ```
 完整函数代码
 ```python
 def get_shape_type(multi_note: list[Vector]) -> Shape:
-    same_count_dict = Counter(multi_note) # Python自带的统计方法，会把重复的点数统计起来
+    same_count_dict = Counter(multi_note)
 
-    is_line = True # 判断是否为线段
-    is_same = False # 判断是否为点
-    diva_check = False # 修补Diva的判断逻辑
+    is_line = True
+    is_same = False
+    diva_check = False
 
     note_pre2: None|Vector = multi_note[0]
     note_pre1: None|Vector = multi_note[1]
@@ -266,29 +266,32 @@ def get_shape_type(multi_note: list[Vector]) -> Shape:
         is_same = True
     
     if len(same_count_dict) == 2:
-        single, multi = 0, 0
+        diva_check = True
+        single:None|Vector = None
+        multi:None|Vector = None
+
         keys:list[Vector] = list(same_count_dict.keys())
         
-        if same_count_dict[keys[0]] > same_count_dict[keys[1]]:
+        if same_count_dict[keys[0]] > same_count_dict[keys[1]] and same_count_dict[keys[1]] == 1:
             single, multi = keys[1], keys[0]
             
-        elif same_count_dict[keys[0]] < same_count_dict[keys[1]]:
+        elif same_count_dict[keys[0]] < same_count_dict[keys[1]] and same_count_dict[keys[0]] == 1:
             single, multi = keys[0], keys[1]
 
         if isinstance(single, Vector) and isinstance(multi, Vector):
-            diva_check = (multi.y - single.y) < 0
+            diva_check = (multi.y - single.y) <= 0
 
-    if is_same:
-        return Shape.POINT
+    if is_line == False and is_same == False:
+        return Shape.POLYGON
 
     elif diva_check:
         return Shape.POLYGON
 
-    elif is_line:
-        return Shape.LINE
-    
+    elif is_same:
+        return Shape.POINT
+
     else:
-        return Shape.POLYGON
+        return Shape.LINE
 ```
 连接线调用逻辑  
 ```python
@@ -446,22 +449,20 @@ def get_shape_type(multi_note: list[Vector]) -> Shape:
     
     # 处理特殊共线情况匹配Diva实际效果
     if len(same_count_dict) == 2:
-        
+        diva_check = True # 默认情况下调用四边形
         single:None|Vector = None
         multi:None|Vector = None
 
         keys:list[Vector] = list(same_count_dict.keys())
         
-        # 检测不共点，确保传入的即使是双押也不会有问题
         if same_count_dict[keys[0]] > same_count_dict[keys[1]] and same_count_dict[keys[1]] == 1:
             single, multi = keys[1], keys[0]
             
         elif same_count_dict[keys[0]] < same_count_dict[keys[1]] and same_count_dict[keys[0]] == 1:
             single, multi = keys[0], keys[1]
 
-        #计算不共点相对位置，如果在共点上方则按照Diva的逻辑算作多边形
         if isinstance(single, Vector) and isinstance(multi, Vector):
-            diva_check = (multi.y - single.y) < 0
+            diva_check = (multi.y - single.y) <= 0
 
     if is_line == False and is_same == False:
         return Shape.POLYGON
