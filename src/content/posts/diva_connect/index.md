@@ -130,6 +130,24 @@ def polar_angle_sort(multi_note: list[Vector]) -> list[Vector]:
     - $$0^\circ = 1$$
     - $$180^\circ = -1$$
 
+我们给向量类添加以下点乘和叉乘方法  
+```python
+class Vector:
+    def dot(self, other) -> float:
+        # a.b
+        if isinstance(other, Vector):
+            return self.x * other.x + self.y * other.y
+        else:
+            raise TypeError(f"unsupported operand type(s) for dot(): 'Vector' and '{type(other).__name__}'")
+
+    def cross(self, other) -> float:
+        # a.b
+        if isinstance(other, Vector):
+            return self.x * other.y - self.y * other.x
+        else:
+            raise TypeError(f"unsupported operand type(s) for cross(): 'Vector' and '{type(other).__name__}'")
+```
+
 这个算法的思路如下：
 1. 将所有的点按x进行排序，如果x相同则按y进行排序。这时候第一个点和最后一个点一定是凸多边形最边缘的两个顶点
 2. 以第一个点为基点，从左往右扫描获得下凸包部分。  
@@ -141,7 +159,13 @@ def polar_angle_sort(multi_note: list[Vector]) -> list[Vector]:
 那么我们要如何确定一个点往哪个方向旋转呢？  
 我们看叉乘的几何定义会发现其使用到了<mark>sin函数</mark>，其在一二象限中取值大于0，三四象限中取值小于0，因此可以直接利用叉乘判断点在哪一侧  
 当点在同一条线上时，我们可以利用点乘几何定义中的cos函数判断点在哪一个位置，正数说明顺序为ABC，负数说明顺序为ACB  
-
+因此我们可以选取两个点将点分为两个部分，一个端点顺时针旋转，另一个端点逆时针旋转形成凸多边形
+```python
+def convex_hull(multi_note: list[Vector]) -> list[Vector]:
+    multi_note.sort(key=lambda x: (x.x, x.y))
+    bottom_left: Vector = multi_note[0]
+    top_right: Vector = multi_note[-1]
+```
 
 然而凸包算法设计之初是为了在一堆点钟寻找能够包起来的多边形，而如果为一个凹多边形，凸包算法将会舍弃掉凹下去的点形成一个三角形。  
 因此KHC选择了一种更简单粗暴的办法：如果存在被舍弃的点，那么这个点将会**直接与其他点相连。**  
