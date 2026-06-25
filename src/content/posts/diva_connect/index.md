@@ -23,6 +23,7 @@ permalink: "diva_kiseki"
 也许你会觉得，我们只需要把多个点**按顺序连接起来就可以了**  
 那么让我们跟着这个思路尝试编写代码，首先我们创建一个向量类便于后续进行计算  
 ```python
+import math
 from dataclasses import dataclass
 @dataclass(frozen=True)
 class Vector:
@@ -36,7 +37,7 @@ class Vector:
         elif isinstance(other, (int, float)):
             return Vector(self.x + other, self.y + other)
         else:
-            raise TypeError()
+            raise TypeError(f"unsupported operand type(s) for +: 'Vector' and '{type(other).__name__}'")
 
     def __sub__(self, other) -> "Vector":
         # a - b
@@ -45,14 +46,37 @@ class Vector:
         elif isinstance(other, (int, float)):
             return Vector(self.x - other, self.y - other)
         else:
-            raise TypeError()
+            raise TypeError(f"unsupported operand type(s) for -: 'Vector' and '{type(other).__name__}'")
 
     def __truediv__(self, other) -> "Vector":
         # a / b
         if isinstance(other, (int, float)):
             return Vector(self.x / other, self.y / other)
         else:
-            raise TypeError()
+            raise TypeError(f"unsupported operand type(s) for /: 'Vector' and '{type(other).__name__}'")
+
+    def dot(self, other) -> float:
+        # a.b
+        if isinstance(other, Vector):
+            return self.x * other.x + self.y * other.y
+        else:
+            raise TypeError(f"unsupported operand type(s) for dot(): 'Vector' and '{type(other).__name__}'")
+
+    def cross(self, other) -> float:
+        # a*b
+        if isinstance(other, Vector):
+            return self.x * other.y - self.y * other.x
+        else:
+            raise TypeError(f"unsupported operand type(s) for cross(): 'Vector' and '{type(other).__name__}'")
+
+    @property
+    def norm_squared(self) -> float:
+        # |a|^2
+        return self.x ** 2 + self.y ** 2
+
+    def norm(self) -> float:
+        # |a|
+        return math.sqrt(self.norm_squared)
 
 ```
 对于两个Note，我们只需要将其直接连接起来就行
@@ -162,9 +186,55 @@ class Vector:
 因此我们可以选取两个点将点分为两个部分，一个端点顺时针旋转，另一个端点逆时针旋转形成凸多边形
 ```python
 def convex_hull(multi_note: list[Vector]) -> list[Vector]:
-    multi_note.sort(key=lambda x: (x.x, x.y))
-    bottom_left: Vector = multi_note[0]
-    top_right: Vector = multi_note[-1]
+    
+    def orientation(point_a: Vector, point_b: Vector, point_c: Vector) -> int:
+        '''
+        获取向量转向是哪个方向
+        '''
+        vector_1: Vector = point_b - point_a
+        vector_2: Vector = point_c - point_b
+
+        cross: float = vector_1.cross(vector_2)
+        
+        if cross > 0: return 1 # 逆时针
+        if cross < 0: return -1 # 顺时针
+            
+        dot: float = vector_1.dot(vector_2)
+
+        if dot > 0: return -2 # 共线且c点在b点前方
+        if dot < 0: return 2 # 共线且c点在b点后方
+
+        # bc共点
+        return 0
+
+    multi_note.sort(key=lambda note: note.x)
+
+    top_part: list[Vector] = []
+    bottom_part: list[Vector] = []
+
+    for note in multi_note:
+        # 处理下凸包
+        if len(bottom_part) <= 2:
+            bottom_part.append(note)
+            continue
+        
+        bottom_part.append(note)
+        while len(bottom_part) > 2 and orientation(bottom_part[-3], bottom_part[-2], bottom_part[-1]) <= 0:
+            bottom_part.pop(-2)
+
+
+    for note in reversed(multi_note):
+        # 处理上凸包
+        if len(top_part) <= 2:
+            top_part.append(note)
+            continue
+        
+        top_part.append(note)
+        while len(top_part) > 2 and orientation(top_part[-3], top_part[-2], top_part[-1]) <= 0:
+            top_part.pop(-2)
+
+    return bottom_part[:-1] + top_part[:-1]
+
 ```
 
 然而凸包算法设计之初是为了在一堆点钟寻找能够包起来的多边形，而如果为一个凹多边形，凸包算法将会舍弃掉凹下去的点形成一个三角形。  
@@ -368,12 +438,16 @@ def polar_angle_sort_cross(multi_note: list[Vector]) -> list[Vector]:
         vet2:Vector = point_b - point_a
         cross = vet1.cross(vet2)
 
-        if cross < 0:
-            return -1
-        elif cross > 0:
-            return 1
-        else:
-            return 0
+        if cross < 0: return -1
+        elif cross > 0: return 1
+        
+        # 如果两个点共线，则利用点乘比较是在左侧还是右侧
+        dot = vet1.dot(vet2)
+
+        if dot < 0: return 2
+        elif dot > 0: return -2
+
+        return 0
 
     # cos只能比较同样在上侧或同样在下侧的点，需要先分好上下两侧
     top_note = [note for note in multi_note if note.y > centorid.y]
@@ -442,6 +516,13 @@ class Vector:
             return self.x * other.y - self.y * other.x
         else:
             raise TypeError(f"unsupported operand type(s) for cross(): 'Vector' and '{type(other).__name__}'")
+
+    @property
+    def norm_squared(self) -> float:
+        return self.x ** 2 + self.y ** 2
+
+    def norm(self) -> float:
+        return math.sqrt(self.norm_squared)
 
     def __hash__(self) -> int:
         return hash((self.x, self.y))
@@ -519,12 +600,17 @@ def polar_angle_sort_cross(multi_note: list[Vector]) -> list[Vector]:
         vet2:Vector = point_b - point_a
         cross = vet1.cross(vet2)
 
-        if cross < 0:
-            return -1
-        elif cross > 0:
-            return 1
-        else:
-            return 0
+        if cross < 0: return -1
+        elif cross > 0: return 1
+        
+        # 如果两个点共线，则利用点乘比较是在左侧还是右侧
+        dot = vet1.dot(vet2)
+
+        if dot < 0: return 2
+        elif dot > 0: return -2
+
+        return 0
+
 
     top_note = [note for note in multi_note if note.y > centorid.y]
     bottom_note = [note for note in multi_note if not note in top_note]
