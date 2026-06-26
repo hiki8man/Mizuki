@@ -8,7 +8,7 @@ tags: [歌姬计划]
 #image: "./cover.png"
 
 published: 2026-05-16
-updated: 2026-05-16T19:00:00
+updated: 2026-06-26T08:00:00
 
 pinned: false
 draft: false
@@ -137,7 +137,7 @@ def polar_angle_sort(multi_note: list[Vector]) -> list[Vector]:
 
 ----
 
-### ProjectDxxx：Andrew 凸包算法
+### ProjectDxxx：Andrew 凸包算法  
 在了解这个算法前我们需要先知道一点数学知识： 
 - 模长：
     - 数学定义：$$\vec{a} = \sqrt{x^2 + y^2}$$
@@ -146,7 +146,7 @@ def polar_angle_sort(multi_note: list[Vector]) -> list[Vector]:
     - 几何定义：$$\vec{a} \cdot \vec{b} = |\vec{a}|\times|\vec{b}| \cos\theta$$
 - 叉乘（外积）：
     - 数学定义：$$\vec{a} \times \vec{b} = x_1 y_2 - y_1 x_2$$
-    - 几何定义：$$\vec{a} \times \vec{b} = |\vec{a}|\times|\vec{b}| \sin\theta$$
+    - 几何定义：$$\vec{a} \times \vec{b} = |\vec{a}|\times|\vec{b}|\sin\theta$$
 - sin取值：
     - $$0^\circ \sim 180^\circ: [0, 1]$$
     - $$-180^\circ \sim 0^\circ: [-1, 0]$$
