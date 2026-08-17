@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 # 🌸 Mizuki
 
+=======
+该fork用于博客本体  
+# 🌸 Mizuki 
+>>>>>>> origin/blog
 <img align='right' src='logo.png' width='200px' alt="Mizuki logo">
 
 A modern, feature-rich static blog template built with [Astro](https://astro.build), featuring advanced functionality and beautiful design.
