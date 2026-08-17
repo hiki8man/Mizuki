@@ -5,8 +5,10 @@
 
 import {
 	FANCYBOX_SELECTORS,
+	type FancyboxConfig,
 	getDefaultFancyboxConfig,
 } from "../core/swup-config";
+import { type FancyboxL10n, loadFancyboxL10n } from "../utils/fancybox-l10n";
 
 // Fancybox 模块类型
 type FancyboxType = any;
@@ -19,6 +21,7 @@ export class FancyboxHandler {
 	private Fancybox: FancyboxType | null = null;
 	private boundSelectors: string[] = [];
 	private initialized = false;
+	private l10n: FancyboxL10n | null = null;
 
 	/**
 	 * 初始化 Fancybox
@@ -31,7 +34,7 @@ export class FancyboxHandler {
 			return;
 		}
 
-		// 按需加载 Fancybox 模块
+		// 按需加载 Fancybox 模块及语言包
 		if (!this.Fancybox) {
 			await this.loadFancybox();
 		}
@@ -51,18 +54,20 @@ export class FancyboxHandler {
 	private checkForImages(): boolean {
 		return (
 			document.querySelector(FANCYBOX_SELECTORS.albumImages) !== null ||
+			document.querySelector(FANCYBOX_SELECTORS.imageGrids) !== null ||
 			document.querySelector(FANCYBOX_SELECTORS.albumLinks) !== null ||
 			document.querySelector(FANCYBOX_SELECTORS.singleFancybox) !== null
 		);
 	}
 
 	/**
-	 * 加载 Fancybox 模块和样式
+	 * 加载 Fancybox 模块和样式，并动态引入匹配的语言包
 	 */
 	private async loadFancybox(): Promise<void> {
 		const mod = await import("@fancyapps/ui");
 		this.Fancybox = mod.Fancybox;
 		await import("@fancyapps/ui/dist/fancybox/fancybox.css");
+		this.l10n = await loadFancyboxL10n();
 	}
 
 	/**
@@ -73,18 +78,22 @@ export class FancyboxHandler {
 			return;
 		}
 
-		const commonConfig = getDefaultFancyboxConfig();
+		const baseConfig = getDefaultFancyboxConfig();
+		const commonConfig: FancyboxConfig = {
+			...baseConfig,
+			...(this.l10n ? { l10n: this.l10n } : {}),
+		};
 
 		// 绑定相册/文章图片
-		this.Fancybox.bind(FANCYBOX_SELECTORS.albumImages, {
-			...commonConfig,
-			groupAll: true,
-			Carousel: {
-				transition: "slide",
-				preload: 2,
-			},
-		});
+		this.Fancybox.bind(
+			FANCYBOX_SELECTORS.albumImages,
+			this.createAlbumImagesConfig(commonConfig),
+		);
 		this.boundSelectors.push(FANCYBOX_SELECTORS.albumImages);
+
+		// 图片网格会使用各自的 data-fancybox 值分组，不能与整篇文章图片混合。
+		this.Fancybox.bind(FANCYBOX_SELECTORS.imageGrids, commonConfig);
+		this.boundSelectors.push(FANCYBOX_SELECTORS.imageGrids);
 
 		// 绑定相册链接
 		this.Fancybox.bind(FANCYBOX_SELECTORS.albumLinks, {
@@ -98,6 +107,29 @@ export class FancyboxHandler {
 		// 绑定单独的 fancybox 图片
 		this.Fancybox.bind(FANCYBOX_SELECTORS.singleFancybox, commonConfig);
 		this.boundSelectors.push(FANCYBOX_SELECTORS.singleFancybox);
+	}
+
+	/**
+	 * 创建相册/文章图片配置
+	 * 保留默认 Carousel 插件配置，避免覆盖旋转工具栏
+	 */
+	private createAlbumImagesConfig(commonConfig: FancyboxConfig): FancyboxConfig {
+		const carouselConfig = commonConfig.Carousel ?? {};
+		const lazyloadConfig = carouselConfig.Lazyload;
+
+		return {
+			...commonConfig,
+			groupAll: true,
+			Carousel: {
+				...carouselConfig,
+				transition: "slide",
+				...(this.l10n ? { l10n: this.l10n } : {}),
+				Lazyload: {
+					...(typeof lazyloadConfig === "object" ? lazyloadConfig : {}),
+					preload: 2,
+				},
+			},
+		};
 	}
 
 	/**

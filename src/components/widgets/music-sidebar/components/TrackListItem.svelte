@@ -1,26 +1,18 @@
 <script lang="ts">
-	import Icon from "@iconify/svelte";
+import Icon from "@iconify/svelte";
 
-	import type { Song } from "../../music-player/types";
+import { DEFAULT_COVER_URL } from "@/components/widgets/music-player/constants";
+import { resolveAssetUrl } from "@/utils/asset-url";
+import type { Song } from "../../music-player/types";
 
-	interface Props {
-		song: Song;
-		isCurrent: boolean;
-		isPlaying: boolean;
-		onclick: () => void;
-	}
+interface Props {
+	song: Song;
+	isCurrent: boolean;
+	isPlaying: boolean;
+	onclick: () => void;
+}
 
-	const { song, isCurrent, isPlaying, onclick }: Props = $props();
-
-	function getAssetPath(path: string): string {
-		if (path.startsWith("http://") || path.startsWith("https://")) {
-			return path;
-		}
-		if (path.startsWith("/")) {
-			return path;
-		}
-		return `/${path}`;
-	}
+const { song, isCurrent, isPlaying, onclick }: Props = $props();
 </script>
 
 <div
@@ -40,7 +32,7 @@
 >
 	<div class="cover-shell">
 		<img
-			src={getAssetPath(song.cover)}
+			src={resolveAssetUrl(song.cover || DEFAULT_COVER_URL)}
 			alt={song.title}
 			loading="lazy"
 			class="item-cover"

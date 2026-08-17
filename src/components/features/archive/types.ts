@@ -12,7 +12,13 @@ export interface Post {
 		tags: string[];
 		category?: string;
 		published: Date;
+		_publishedDateOnly: boolean;
 		alias?: string;
 		permalink?: string;
 	};
+}
+
+export interface Group {
+	year: number;
+	posts: Post[];
 }

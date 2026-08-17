@@ -2,19 +2,15 @@
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import { Icon } from "astro-icon/components";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
 
 interface Props {
 	updatedDate: Date;
 	class?: string;
 }
 
-dayjs.extend(utc);
-
 const { updatedDate, class: className } = Astro.props;
 
-const lastModified = dayjs(updatedDate).utc().format("YYYY-MM-DDTHH:mm:ss");
+const lastModified = updatedDate.toISOString();
 ---
 
 <>
@@ -93,11 +89,11 @@ const lastModified = dayjs(updatedDate).utc().format("YYYY-MM-DDTHH:mm:ss");
 		</script>
 		<div class="flex items-center gap-3">
 			<div
-				class="flex items-center justify-center h-12 w-12 rounded-lg bg-[var(--enter-btn-bg)]"
+				class="flex items-center justify-center h-12 w-12 rounded-lg bg-(--enter-btn-bg)"
 			>
 				<Icon
 					name="material-symbols:history-rounded"
-					class="text-3xl text-[var(--primary)]"
+					class="text-3xl text-(--primary)"
 				/>
 			</div>
 			<div class="flex flex-col gap-1">

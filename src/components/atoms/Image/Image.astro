@@ -1,5 +1,17 @@
 ---
-import path from "node:path";
+import { Image as AstroImage, Picture } from "astro:assets";
+import type { ImageFormat, ResponsiveImageLayout } from "../../../types/config";
+import {
+	isRemoteImageSource,
+	publicImageUrl,
+	resolveImageMetadata,
+} from "../../../utils/image-source-utils";
+import {
+	getFallbackFormat,
+	getImageFormats,
+	getImageQuality,
+	shouldAddNoReferrer,
+} from "../../../utils/image-utils";
 
 interface Props {
 	id?: string;
@@ -10,13 +22,15 @@ interface Props {
 	basePath?: string;
 	loading?: "eager" | "lazy";
 	fetchpriority?: "high" | "low" | "auto";
+	// 响应式图像属性
+	layout?: ResponsiveImageLayout;
+	usePicture?: boolean;
+	formats?: ImageFormat[];
 	widths?: number[];
 	sizes?: string;
+	quality?: number;
+	overlay?: boolean;
 }
-
-import { Image as AstroImage } from "astro:assets";
-
-import { url } from "../../../utils/url-utils";
 
 const {
 	id,
@@ -26,56 +40,63 @@ const {
 	basePath = "/",
 	loading = "lazy",
 	fetchpriority,
+	layout = "constrained",
+	usePicture = true,
+	formats = getImageFormats(),
 	widths,
 	sizes,
+	quality = getImageQuality(),
+	overlay = true,
 } = Astro.props;
 const className = Astro.props.class;
 
-const isLocal = !(
-	src.startsWith("/") ||
-	src.startsWith("http") ||
-	src.startsWith("https") ||
-	src.startsWith("data:")
-);
-const isPublic = src.startsWith("/");
+const fallbackFormat = getFallbackFormat();
 
-// TODO temporary workaround for images dynamic import
-// https://github.com/withastro/astro/issues/3373
-// biome-ignore lint/suspicious/noImplicitAnyLet: <check later>
-let img: ImageMetadata | undefined;
-if (isLocal) {
-	const files = import.meta.glob<ImageMetadata>("../../../**", {
-		import: "default",
-	});
-	const normalizedPath = path
-		.normalize(path.join("../../../", basePath, src))
-		.replace(/\\/g, "/");
-	const file = files[normalizedPath];
-	if (!file) {
-		console.error(
-			`\n[ERROR] Image file not found: ${normalizedPath.replace("../../../", "src/")}`,
-		);
-	} else {
-		img = await file();
-	}
+const isRemote = isRemoteImageSource(src);
+const isPublic = src.startsWith("/") && !isRemote;
+const img = await resolveImageMetadata(src, basePath);
+if (!img && !isPublic && !isRemote) {
+	console.error(`\n[ERROR] Image file not found: ${src}`);
 }
 
 const imageClass = "w-full h-full object-cover";
 const imageStyle = `object-position: ${position}`;
 
-// 检查是否是 Bilibili 图片
-const isBilibiliImage = !isLocal && src.includes("hdslb.com");
-// 对于外部图片（特别是 Bilibili），需要设置 referrerpolicy 避免 403 错误
-const referrerPolicy = !isLocal && isBilibiliImage ? "no-referrer" : undefined;
+// 基于通配符配置检查是否需要添加 referrerpolicy（仅对非本地图片）
+const fullSrc = isPublic ? publicImageUrl(src) : src;
+const referrerPolicy =
+	!img && shouldAddNoReferrer(fullSrc) ? "no-referrer" : undefined;
+
+// 构建响应式图像属性
+const responsiveProps = {
+	...(layout && { layout }),
+	...(widths && { widths }),
+	...(sizes && { sizes }),
+	...(quality && { quality }),
+};
 ---
 
 <div id={id} class:list={[className, "overflow-hidden relative"]}>
-	<div
-		class="transition absolute inset-0 dark:bg-black/10 bg-opacity-50 pointer-events-none"
-	>
-	</div>
+	{overlay && (
+		<div class="transition absolute inset-0 dark:bg-black/10 bg-opacity-50 pointer-events-none" />
+	)}
 	{
-		isLocal && img && (
+		img && usePicture && (
+			<Picture
+				src={img}
+				alt={alt || ""}
+				class={imageClass}
+				style={imageStyle}
+				loading={loading}
+				fetchpriority={fetchpriority}
+				formats={formats}
+				fallbackFormat={fallbackFormat}
+				{...responsiveProps}
+			/>
+		)
+	}
+	{
+		img && !usePicture && (
 			<AstroImage
 				src={img}
 				alt={alt || ""}
@@ -83,21 +104,20 @@ const referrerPolicy = !isLocal && isBilibiliImage ? "no-referrer" : undefined;
 				style={imageStyle}
 				loading={loading}
 				fetchpriority={fetchpriority}
-				widths={widths}
-				sizes={sizes}
+				{...responsiveProps}
 			/>
 		)
 	}
 	{
-		!isLocal && (
+		!img && (
 			<img
-				src={isPublic ? url(src) : src}
+				src={fullSrc}
 				alt={alt || ""}
 				class={imageClass}
 				style={imageStyle}
 				loading={loading}
 				referrerpolicy={referrerPolicy}
-				crossorigin={isBilibiliImage ? "anonymous" : undefined}
+				decoding="async"
 				fetchpriority={fetchpriority}
 			/>
 		)
